@@ -1,0 +1,1 @@
+# Tools to generate or fetch hints can go here. For now, it's handled in the agent itself.
