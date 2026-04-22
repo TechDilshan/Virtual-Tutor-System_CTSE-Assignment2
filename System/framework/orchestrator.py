@@ -11,6 +11,7 @@ from langgraph.graph import END, START, StateGraph
 
 class WorkflowState(TypedDict, total=False):
     content: List[str]
+    structured_content: Dict[str, List[str]]
     questions: List[str]
     hints: Dict[str, str]
     results: Dict[str, Dict[str, str]]
@@ -22,6 +23,8 @@ class Orchestrator:
         question_count: int = 3,
         verbose: bool = False,
         exam_file: str | None = None,
+        difficulty: str = "medium",
+        exam_duration_minutes: int = 30,
     ):
         self.domain = domain
         self.question_count = question_count
@@ -31,6 +34,9 @@ class Orchestrator:
         self.exam_agent = ExamSimulationAgent()
         self.state_manager = StateManager()
         self.logger = Logger(verbose=verbose)
+        self.difficulty = difficulty
+        self.exam_duration_minutes = exam_duration_minutes
+        self.student_accuracy = None
         self.workflow_graph = self._build_graph()
 
     def _build_graph(self):
@@ -74,16 +80,23 @@ class Orchestrator:
         return {"results": results}
 
     def run_content_retrieval(self):
-        content = self.content_agent.retrieve_content()
+        structured = self.content_agent.retrieve_structured_content()
+        content = self.content_agent.content or []
         self.state_manager.update_state("content", content)
+        self.state_manager.update_state("structured_content", structured)
         self.logger.trace("ContentRetrievalAgent", "retrieve_content", {"content_count": len(content)})
         return content
 
     def run_question_generation(self):
         content = self.state_manager.get_state("content")
         if content is None:
-            content = self.run_content_retrieval()
-        questions = self.question_agent.generate_questions(content=content, count=self.question_count)
+            self.run_content_retrieval()
+        questions = self.question_agent.generate_questions(
+            content=None,
+            count=self.question_count,
+            difficulty=self.difficulty,
+            student_accuracy=self.student_accuracy,
+        )
         self.state_manager.update_state("questions", questions)
         self.logger.trace("QuestionGeneratorAgent", "generate_questions", {"question_count": len(questions)})
         return questions
@@ -92,7 +105,16 @@ class Orchestrator:
         questions = self.state_manager.get_state("questions")
         if questions is None:
             questions = self.run_question_generation()
-        hints = {question: self.hint_agent.provide_hint(question) for question in questions}
+        prior_results = self.state_manager.get_state("results") or {}
+        history = [
+            {"question": q, "result": payload.get("status", "Unknown")}
+            for q, payload in prior_results.items()
+            if q != "_summary" and isinstance(payload, dict)
+        ]
+        hints = {
+            question: self.hint_agent.provide_hint(question, student_history=history, hint_level="standard")
+            for question in questions
+        }
         self.state_manager.update_state("hints", hints)
         self.logger.trace("HintProviderAgent", "provide_hints", {"hint_count": len(hints)})
         return hints
@@ -101,7 +123,16 @@ class Orchestrator:
         questions = self.state_manager.get_state("questions")
         if questions is None:
             questions = self.run_question_generation()
-        results = self.exam_agent.simulate_exam(questions=questions, duration=30, seed=42)
+        results = self.exam_agent.simulate_exam(
+            questions=questions,
+            duration=self.exam_duration_minutes,
+            seed=42,
+        )
+        summary = results.get("_summary", {})
+        explanation = summary.get("explanation", "")
+        accuracy_match = explanation.split("(")[-1].replace("%).", "").replace("%)", "").strip()
+        if accuracy_match.isdigit():
+            self.student_accuracy = int(accuracy_match) / 100.0
         self.state_manager.update_state("results", results)
         self.logger.trace("ExamSimulationAgent", "simulate_exam", {"results_count": len(results)})
         return results
@@ -129,7 +160,8 @@ class Orchestrator:
         print(f"Content Retrieval Agent: loaded {len(content)} content file(s)")
         print(f"Question Generator Agent: generated {len(questions)} question(s)")
         print(f"Hint Provider Agent: produced {len(hints)} hint(s)")
-        print(f"Exam Simulation Agent: simulated {len(results)} answer result(s)\n")
+        answer_results = {k: v for k, v in results.items() if k != "_summary"}
+        print(f"Exam Simulation Agent: simulated {len(answer_results)} answer result(s)\n")
 
         print("Questions + Hints + Result:")
         for index, question in enumerate(questions, start=1):
@@ -143,4 +175,10 @@ class Orchestrator:
             print(f"   Expected: {expected}")
             print(f"   Student: {student}")
             print(f"   Result: {status}")
+            if isinstance(result_info, dict):
+                print(f"   Explanation: {result_info.get('explanation', 'N/A')}")
+                print(f"   Time Limit(sec): {result_info.get('time_allocated_sec', 'N/A')}")
+        summary = results.get("_summary", {})
+        if isinstance(summary, dict):
+            print(f"\nOverall: {summary.get('explanation', 'N/A')}")
         print("========================================\n")

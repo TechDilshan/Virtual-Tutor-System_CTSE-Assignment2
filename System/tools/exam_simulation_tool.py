@@ -17,8 +17,9 @@ def _safe_ollama(prompt: str, fallback: str) -> str:
 
 def _compact_text(value: str) -> str:
     text = " ".join(value.strip().split())
-    text = re.sub(r"^mode:\s*(correct|incorrect|partial)\s*!\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^mode:\s*(correct|incorrect|partial)\s*!?\s*", "", text, flags=re.IGNORECASE)
     text = re.sub(r"^answer:\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^mode:\s*(correct|incorrect|partial)\s*answer:\s*", "", text, flags=re.IGNORECASE)
     text = re.sub(r"^the correct answer is:\s*", "", text, flags=re.IGNORECASE)
     return text
 
@@ -27,6 +28,7 @@ def simulate_exam(
     questions: List[str],
     duration: int = 30,
     seed: Optional[int] = None,
+    student_answers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Dict[str, str]]:
     """
     Simulate an exam result set without blocking execution.
@@ -38,6 +40,9 @@ def simulate_exam(
     """
     results: Dict[str, Dict[str, str]] = {}
     rng = random.Random(seed)
+    duration_seconds = max(60, duration * 60)
+    per_question_seconds = max(20, duration_seconds // max(1, len(questions)))
+    overall_correct = 0
 
     for question in questions:
         expected_prompt = (
@@ -47,17 +52,20 @@ def simulate_exam(
         expected = _safe_ollama(expected_prompt, "Expected answer unavailable (Ollama offline).")
         expected = _compact_text(expected)
 
-        student_mode = rng.choice(["correct", "partial", "incorrect"])
-        student_prompt = (
-            "Act as a student and answer this question in one short line. "
-            f"Mode: {student_mode}. "
-            "If mode is correct, give a fully correct answer. "
-            "If mode is partial, give an incomplete but relevant answer. "
-            "If mode is incorrect, give a clearly wrong answer.\n"
-            f"Question: {question}"
-        )
-        student_answer = _safe_ollama(student_prompt, f"{student_mode} answer unavailable (Ollama offline).")
-        student_answer = _compact_text(student_answer)
+        if student_answers and question in student_answers:
+            student_answer = _compact_text(student_answers[question])
+        else:
+            student_mode = rng.choice(["correct", "partial", "incorrect"])
+            student_prompt = (
+                "Act as a student and answer this question in one short line. "
+                f"Mode: {student_mode}. "
+                "If mode is correct, give a fully correct answer. "
+                "If mode is partial, give an incomplete but relevant answer. "
+                "If mode is incorrect, give a clearly wrong answer.\n"
+                f"Question: {question}"
+            )
+            student_answer = _safe_ollama(student_prompt, f"{student_mode} answer unavailable (Ollama offline).")
+            student_answer = _compact_text(student_answer)
 
         judge_prompt = (
             "Evaluate the student's answer compared to expected answer. Return exactly one label only: "
@@ -70,11 +78,32 @@ def simulate_exam(
         status = _compact_text(status)
         if status not in {"Correct", "Incorrect", "Partially Correct"}:
             status = "Partially Correct"
+        if status == "Correct":
+            overall_correct += 1
+
+        explanation_prompt = (
+            "Provide a concise one-line explanation for the correct solution path.\n"
+            f"Question: {question}\nExpected answer: {expected}"
+        )
+        explanation = _compact_text(
+            _safe_ollama(explanation_prompt, "Review the core concept and apply the method step by step.")
+        )
 
         results[question] = {
             "status": status,
             "expected_answer": expected,
             "student_answer": student_answer,
+            "time_allocated_sec": str(per_question_seconds),
+            "explanation": explanation,
         }
+
+    score_percent = int((overall_correct / max(1, len(questions))) * 100)
+    results["_summary"] = {
+        "status": "Completed",
+        "expected_answer": "N/A",
+        "student_answer": "N/A",
+        "time_allocated_sec": str(duration_seconds),
+        "explanation": f"Score: {overall_correct}/{len(questions)} ({score_percent}%).",
+    }
 
     return results

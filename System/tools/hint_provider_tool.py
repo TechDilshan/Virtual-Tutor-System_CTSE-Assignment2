@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List, Optional
 import re
 from tools.llm_tool import generate_with_ollama
 
@@ -6,10 +6,16 @@ def _compact_hint(text: str) -> str:
     cleaned = " ".join(text.strip().split())
     # Remove common verbose lead-ins from model outputs.
     cleaned = re.sub(r"^(here's|here is)\s+a\s+helpful\s+hint:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^hint:\s*", "", cleaned, flags=re.IGNORECASE)
     return cleaned
 
 
-def provide_hint(question: str, domain: str = "math") -> str:
+def provide_hint(
+    question: str,
+    domain: str = "math",
+    student_history: Optional[List[Dict[str, str]]] = None,
+    hint_level: str = "standard",
+) -> str:
     """
     Provide a domain-aware hint for a question.
     """
@@ -29,9 +35,18 @@ def provide_hint(question: str, domain: str = "math") -> str:
     }
 
     cleaned_question = re.sub(r"^\s*q?\d+[\).:-]?\s*", "", question, flags=re.IGNORECASE).strip()
+    weakness_context = ""
+    if student_history:
+        recent_errors = [item for item in student_history[-5:] if item.get("result") in {"Incorrect", "Partially Correct"}]
+        if recent_errors:
+            weakness_context = (
+                "Student recent weak areas: "
+                + "; ".join(item.get("question", "")[:80] for item in recent_errors)
+            )
     prompt = (
-        f"Provide one short helpful hint for this {domain} exam question. "
-        "Do not give the final answer.\n"
+        f"Provide one {hint_level} helpful hint for this {domain} exam question. "
+        "Do not give the final answer. Keep it concise and actionable.\n"
+        f"{weakness_context}\n"
         f"Question: {cleaned_question}"
     )
     llm_hint = generate_with_ollama(prompt)
