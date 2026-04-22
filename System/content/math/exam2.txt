@@ -1,0 +1,5 @@
+1. What is 15 - 8?
+2. Solve for x: 2x - 7 = 11
+3. What is the derivative of 3x^2 + 2x?
+4. Find the value of x in the equation 4x² = 36.
+5. Calculate the area of a triangle with base 10 and height 5.

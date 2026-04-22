@@ -1,11 +1,3 @@
-import random
-import time
+from tools.exam_simulation_tool import simulate_exam
 
-def simulate_exam(questions, duration=30):
-    """
-    Simulate an exam by timing the student and providing random answers.
-    """
-    print(f"Simulating exam for {duration} minutes...")
-    time.sleep(duration)  # Simulate time taken for exam
-    results = {question: random.choice(['Correct', 'Incorrect']) for question in questions}
-    return results
+__all__ = ["simulate_exam"]

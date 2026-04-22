@@ -1,0 +1,5 @@
+1. What is 7 × 9?
+2. Solve for x: 5x + 10 = 30
+3. What is the integral of x^2?
+4. Simplify the expression: (3x + 4) - (x - 2).
+5. Find the perimeter of a rectangle with length 12 and width 8.

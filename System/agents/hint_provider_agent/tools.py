@@ -1,1 +1,3 @@
-# Tools to generate or fetch hints can go here. For now, it's handled in the agent itself.
+from tools.hint_provider_tool import provide_hint
+
+__all__ = ["provide_hint"]

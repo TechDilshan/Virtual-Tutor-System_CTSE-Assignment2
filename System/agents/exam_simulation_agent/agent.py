@@ -1,16 +1,14 @@
-import time
 from .tools import simulate_exam
 
 class ExamSimulationAgent:
     def __init__(self):
         self.results = {}
 
-    def simulate_exam(self, questions, duration=30):
+    def simulate_exam(self, questions, duration=30, seed=None):
         """
         Simulate an exam with the given questions and time limit.
         """
-        print(f"Starting the exam with {len(questions)} questions for {duration} minutes...")
-        self.results = simulate_exam(questions, duration)
+        self.results = simulate_exam(questions=questions, duration=duration, seed=seed)
         return self.results
 
     def display_results(self):

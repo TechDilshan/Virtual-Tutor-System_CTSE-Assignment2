@@ -1,5 +1,4 @@
-# List all necessary dependencies
-LangGraph==0.1.0
-CrewAI==0.2.0
-AutoGen==0.3.0
-unittest
+crewai 
+langchain-community 
+ollama
+langgraph

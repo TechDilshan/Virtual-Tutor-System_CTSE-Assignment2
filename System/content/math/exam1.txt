@@ -1,0 +1,5 @@
+1. What is 2 + 2?
+2. Solve for x: 3x + 5 = 20
+3. What is the square root of 144?
+4. Differentiate the function f(x) = x^2 + 3x - 5.
+5. Integrate the function ∫ (4x^3 - 2x) dx.

@@ -1,21 +1,12 @@
-class HintProviderAgent:
-    def __init__(self):
-        self.hints = {}
+from .tools import provide_hint
 
-    def provide_hint(self, question):
+
+class HintProviderAgent:
+    def __init__(self, domain: str = "math"):
+        self.domain = domain
+
+    def provide_hint(self, question: str) -> str:
         """
-        Provide hints based on the student's progress.
+        Provide hints based on question text and configured domain.
         """
-        self.hints = {
-            "math": {
-                "What is 2 + 2?": "Think of counting small objects like apples.",
-                "Solve for x: 5x = 25": "Divide both sides of the equation by 5.",
-                "What is the derivative of x^2?": "Use the power rule of differentiation."
-            },
-            "english": {
-                "Write a summary of the text provided.": "Focus on the main ideas, avoid details.",
-                "What is the theme of the novel?": "Look for the central message or lesson of the story.",
-                "Explain the use of metaphors in this poem.": "Identify comparisons without using 'like' or 'as'."
-            }
-        }
-        return self.hints.get(question, "No hint available.")
+        return provide_hint(question=question, domain=self.domain)
