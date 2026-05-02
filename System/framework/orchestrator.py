@@ -115,7 +115,7 @@ class Orchestrator:
 
     def run_question_generation(self):
         source_questions = self.state_manager.get_state("source_questions")
-        if source_questions is None:
+        if not source_questions:
             source_questions = self.run_content_retrieval()
         self.logger.trace("QuestionGeneratorAgent", "input", {"source_count": len(source_questions), "count": self.question_count})
         questions = self.question_agent.generate_questions(content=source_questions, count=self.question_count, difficulty=self.difficulty)
@@ -126,7 +126,7 @@ class Orchestrator:
 
     def run_exam_simulation(self, provided_answers: Dict[str, str] | None = None):
         questions = self.state_manager.get_state("questions")
-        if questions is None:
+        if not questions:
             questions = self.run_question_generation()
         self.logger.trace("ExamSimulationAgent", "input", {"question_count": len(questions)})
         evaluation = self.exam_agent.simulate_exam(questions=questions, provided_answers=provided_answers)
@@ -141,7 +141,7 @@ class Orchestrator:
 
     def run_hint_provider(self):
         questions = self.state_manager.get_state("questions")
-        if questions is None:
+        if not questions:
             questions = self.run_question_generation()
         evaluation = self.state_manager.get_state("evaluation") or {}
         weak_topics = evaluation.get("summary", {}).get("weak_topics", []) if isinstance(evaluation, dict) else []

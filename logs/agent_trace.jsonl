@@ -50,3 +50,12 @@
 {"timestamp": "2026-05-02T12:03:14.341762+00:00", "agent": "HintProviderAgent", "step": "input", "payload": {"questions_for_hints": 4}}
 {"timestamp": "2026-05-02T12:03:14.342631+00:00", "agent": "HintProviderAgent", "step": "tool_usage", "payload": {"tools": ["hint_generation_tool"]}}
 {"timestamp": "2026-05-02T12:03:14.342698+00:00", "agent": "HintProviderAgent", "step": "output", "payload": {"hint_count": 4}}
+{"timestamp": "2026-05-02T13:36:48.802989+00:00", "agent": "ContentRetrievalAgent", "step": "input", "payload": {"domain": "math", "exam_file": "exam1.txt"}}
+{"timestamp": "2026-05-02T13:36:48.803611+00:00", "agent": "ContentRetrievalAgent", "step": "tool_usage", "payload": {"tools": ["file_reader_tool", "parser_tool"]}}
+{"timestamp": "2026-05-02T13:36:48.803690+00:00", "agent": "ContentRetrievalAgent", "step": "output", "payload": {"structured_count": 6}}
+{"timestamp": "2026-05-02T13:36:48.803782+00:00", "agent": "QuestionGeneratorAgent", "step": "input", "payload": {"source_count": 6, "count": 5}}
+{"timestamp": "2026-05-02T13:37:04.890633+00:00", "agent": "QuestionGeneratorAgent", "step": "tool_usage", "payload": {"tools": ["question_generation_tool"]}}
+{"timestamp": "2026-05-02T13:37:04.898465+00:00", "agent": "QuestionGeneratorAgent", "step": "output", "payload": {"question_count": 5}}
+{"timestamp": "2026-05-02T13:37:04.898933+00:00", "agent": "HintProviderAgent", "step": "input", "payload": {"questions_for_hints": 5}}
+{"timestamp": "2026-05-02T13:37:53.361647+00:00", "agent": "HintProviderAgent", "step": "tool_usage", "payload": {"tools": ["hint_generation_tool"]}}
+{"timestamp": "2026-05-02T13:37:53.364715+00:00", "agent": "HintProviderAgent", "step": "output", "payload": {"hint_count": 5}}
