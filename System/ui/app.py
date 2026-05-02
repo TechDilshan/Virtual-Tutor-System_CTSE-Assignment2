@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 from components.dashboard import DashboardFrame
+from components.question_list_panel import QuestionListPanel
 from components.question_panel import QuestionPanel
 from components.result_panel import ResultPanel
 from components.sidebar import Sidebar
@@ -59,11 +60,12 @@ class VirtualTutorApp(ctk.CTk):
             on_next=self.handle_next_question,
             on_finish=self.handle_finish_exam,
         )
+        self.questions_overview = QuestionListPanel(self.content_host)
         self.result_screen = ResultPanel(self.content_host)
 
         self.screens = {
             "dashboard": self.dashboard,
-            "questions": self.question_screen,
+            "questions": self.questions_overview,
             "exam": self.question_screen,
             "results": self.result_screen,
         }
@@ -138,6 +140,7 @@ class VirtualTutorApp(ctk.CTk):
                 raise ValueError("No generated questions available.")
             self.current_idx = 0
             self.dashboard.start_exam_btn.configure(state="normal")
+            self.questions_overview.set_questions(self.questions)
             self.question_screen.set_question(self.questions[0]["question"], 1, len(self.questions))
             self.show_screen("questions")
             messagebox.showinfo("Questions Generated", f"{len(self.questions)} questions generated.")
