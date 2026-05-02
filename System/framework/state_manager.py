@@ -8,7 +8,19 @@ from typing import Any, Dict, Optional
 class StateManager:
     def __init__(self) -> None:
         self._lock = Lock()
-        self.global_state: Dict[str, Any] = {}
+        self.global_state: Dict[str, Any] = self._default_state()
+
+    @staticmethod
+    def _default_state() -> Dict[str, Any]:
+        return {
+            "questions": [],
+            "answers": [],
+            "score": 0,
+            "weak_topics": [],
+            "source_questions": [],
+            "hints": {},
+            "evaluation": {},
+        }
 
     def update_state(self, key: str, value: Any) -> None:
         """
@@ -36,4 +48,4 @@ class StateManager:
         Clear all global state data.
         """
         with self._lock:
-            self.global_state = {}
+            self.global_state = self._default_state()

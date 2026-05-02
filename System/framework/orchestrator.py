@@ -1,20 +1,29 @@
-from agents.content_retrieval_agent.agent import ContentRetrievalAgent
-from agents.question_generator_agent.agent import QuestionGeneratorAgent
-from agents.hint_provider_agent.agent import HintProviderAgent
-from agents.exam_simulation_agent.agent import ExamSimulationAgent
-from framework.state_manager import StateManager
-from framework.logger import Logger
-from typing import TypedDict, List, Dict
+from __future__ import annotations
 
-from langgraph.graph import END, START, StateGraph
+from typing import Dict, List, TypedDict
+
+try:
+    from crewai import Agent, Crew, Process, Task
+except ModuleNotFoundError:  # pragma: no cover - fallback for lightweight environments
+    Agent = None
+    Crew = None
+    Process = None
+    Task = None
+
+from agents.content_retrieval_agent.agent import ContentRetrievalAgent
+from agents.exam_simulation_agent.agent import ExamSimulationAgent
+from agents.hint_provider_agent.agent import HintProviderAgent
+from agents.question_generator_agent.agent import QuestionGeneratorAgent
+from framework.logger import Logger
+from framework.state_manager import StateManager
 
 
 class WorkflowState(TypedDict, total=False):
-    content: List[str]
-    structured_content: Dict[str, List[str]]
-    questions: List[str]
-    hints: Dict[str, str]
-    results: Dict[str, Dict[str, str]]
+    source_questions: List[Dict[str, str]]
+    questions: List[Dict[str, str]]
+    evaluation: Dict[str, object]
+    hints: Dict[str, Dict[str, str]]
+
 
 class Orchestrator:
     def __init__(
@@ -36,149 +45,176 @@ class Orchestrator:
         self.logger = Logger(verbose=verbose)
         self.difficulty = difficulty
         self.exam_duration_minutes = exam_duration_minutes
-        self.student_accuracy = None
-        self.workflow_graph = self._build_graph()
+        self.crew_enabled = Crew is not None
+        self.crew = self._build_crew() if self.crew_enabled else None
 
-    def _build_graph(self):
-        graph_builder = StateGraph(WorkflowState)
-        graph_builder.add_node("content_retrieval", self._content_node)
-        graph_builder.add_node("question_generation", self._question_node)
-        graph_builder.add_node("hint_provider", self._hint_node)
-        graph_builder.add_node("exam_simulation", self._exam_node)
+    def _build_crew(self):
+        """
+        Configure a CrewAI sequential pipeline with 4 distinct collaborating agents.
+        """
+        content_worker = Agent(
+            role="Content Retrieval Specialist",
+            goal="Read exam sources and produce structured question records.",
+            backstory="Expert in cleaning question banks and metadata extraction.",
+            allow_delegation=False,
+            verbose=False,
+        )
+        question_worker = Agent(
+            role="Question Generator Specialist",
+            goal="Create unique derived questions aligned to requested difficulty.",
+            backstory="Expert in controlled variation and duplicate-safe generation.",
+            allow_delegation=False,
+            verbose=False,
+        )
+        exam_worker = Agent(
+            role="Exam Evaluation Specialist",
+            goal="Evaluate answers accurately and detect weak topics.",
+            backstory="Assessment analyst focused on objective scoring.",
+            allow_delegation=False,
+            verbose=False,
+        )
+        hint_worker = Agent(
+            role="Hint Provider Specialist",
+            goal="Generate progressive hints for weak areas only.",
+            backstory="Pedagogy specialist for scaffolded help levels.",
+            allow_delegation=False,
+            verbose=False,
+        )
 
-        graph_builder.add_edge(START, "content_retrieval")
-        graph_builder.add_edge("content_retrieval", "question_generation")
-        graph_builder.add_edge("question_generation", "hint_provider")
-        graph_builder.add_edge("hint_provider", "exam_simulation")
-        graph_builder.add_edge("exam_simulation", END)
-
-        return graph_builder.compile()
-
-    def _content_node(self, state: WorkflowState) -> WorkflowState:
-        content = self.run_content_retrieval()
-        return {"content": content}
-
-    def _question_node(self, state: WorkflowState) -> WorkflowState:
-        content = state.get("content")
-        if content is not None:
-            self.state_manager.update_state("content", content)
-        questions = self.run_question_generation()
-        return {"questions": questions}
-
-    def _hint_node(self, state: WorkflowState) -> WorkflowState:
-        questions = state.get("questions")
-        if questions is not None:
-            self.state_manager.update_state("questions", questions)
-        hints = self.run_hint_provider()
-        return {"hints": hints}
-
-    def _exam_node(self, state: WorkflowState) -> WorkflowState:
-        questions = state.get("questions")
-        if questions is not None:
-            self.state_manager.update_state("questions", questions)
-        results = self.run_exam_simulation()
-        return {"results": results}
+        tasks = [
+            Task(
+                description="Run content retrieval and parsing into structured questions.",
+                expected_output="Structured source question list with topic/difficulty/type.",
+                agent=content_worker,
+            ),
+            Task(
+                description="Generate N new questions from structured source content.",
+                expected_output="List of generated questions with answers and metadata.",
+                agent=question_worker,
+            ),
+            Task(
+                description="Evaluate answers and produce performance summary.",
+                expected_output="Score, correct count, total, weak topics, and details.",
+                agent=exam_worker,
+            ),
+            Task(
+                description="Provide multi-level hints for weak-topic questions.",
+                expected_output="Three-level hints mapped by question.",
+                agent=hint_worker,
+            ),
+        ]
+        return Crew(agents=[content_worker, question_worker, exam_worker, hint_worker], tasks=tasks, process=Process.sequential, verbose=False)
 
     def run_content_retrieval(self):
+        self.logger.trace("ContentRetrievalAgent", "input", {"domain": self.domain, "exam_file": self.content_agent.exam_file})
         structured = self.content_agent.retrieve_structured_content()
-        content = self.content_agent.content or []
-        self.state_manager.update_state("content", content)
-        self.state_manager.update_state("structured_content", structured)
-        self.logger.trace("ContentRetrievalAgent", "retrieve_content", {"content_count": len(content)})
-        return content
+        self.state_manager.update_state("source_questions", structured)
+        self.logger.trace("ContentRetrievalAgent", "tool_usage", {"tools": ["file_reader_tool", "parser_tool"]})
+        self.logger.trace("ContentRetrievalAgent", "output", {"structured_count": len(structured)})
+        return structured
 
     def run_question_generation(self):
-        content = self.state_manager.get_state("content")
-        if content is None:
-            self.run_content_retrieval()
-        questions = self.question_agent.generate_questions(
-            content=None,
-            count=self.question_count,
-            difficulty=self.difficulty,
-            student_accuracy=self.student_accuracy,
-        )
+        source_questions = self.state_manager.get_state("source_questions")
+        if source_questions is None:
+            source_questions = self.run_content_retrieval()
+        self.logger.trace("QuestionGeneratorAgent", "input", {"source_count": len(source_questions), "count": self.question_count})
+        questions = self.question_agent.generate_questions(content=source_questions, count=self.question_count, difficulty=self.difficulty)
         self.state_manager.update_state("questions", questions)
-        self.logger.trace("QuestionGeneratorAgent", "generate_questions", {"question_count": len(questions)})
+        self.logger.trace("QuestionGeneratorAgent", "tool_usage", {"tools": ["question_generation_tool"]})
+        self.logger.trace("QuestionGeneratorAgent", "output", {"question_count": len(questions)})
         return questions
+
+    def run_exam_simulation(self, provided_answers: Dict[str, str] | None = None):
+        questions = self.state_manager.get_state("questions")
+        if questions is None:
+            questions = self.run_question_generation()
+        self.logger.trace("ExamSimulationAgent", "input", {"question_count": len(questions)})
+        evaluation = self.exam_agent.simulate_exam(questions=questions, provided_answers=provided_answers)
+        summary = evaluation.get("summary", {}) if isinstance(evaluation, dict) else {}
+        self.state_manager.update_state("evaluation", evaluation)
+        self.state_manager.update_state("score", summary.get("score", 0))
+        self.state_manager.update_state("weak_topics", summary.get("weak_topics", []))
+        self.state_manager.update_state("answers", evaluation.get("details", []))
+        self.logger.trace("ExamSimulationAgent", "tool_usage", {"tools": ["evaluation_tool"]})
+        self.logger.trace("ExamSimulationAgent", "output", summary if isinstance(summary, dict) else {})
+        return evaluation
 
     def run_hint_provider(self):
         questions = self.state_manager.get_state("questions")
         if questions is None:
             questions = self.run_question_generation()
-        prior_results = self.state_manager.get_state("results") or {}
-        history = [
-            {"question": q, "result": payload.get("status", "Unknown")}
-            for q, payload in prior_results.items()
-            if q != "_summary" and isinstance(payload, dict)
-        ]
-        hints = {
-            question: self.hint_agent.provide_hint(question, student_history=history, hint_level="standard")
-            for question in questions
-        }
+        evaluation = self.state_manager.get_state("evaluation") or {}
+        weak_topics = evaluation.get("summary", {}).get("weak_topics", []) if isinstance(evaluation, dict) else []
+        questions_for_hints = [q for q in questions if q.get("topic") in weak_topics] if weak_topics else questions
+        self.logger.trace("HintProviderAgent", "input", {"questions_for_hints": len(questions_for_hints)})
+        hints = self.hint_agent.provide_hints(questions_for_hints)
         self.state_manager.update_state("hints", hints)
-        self.logger.trace("HintProviderAgent", "provide_hints", {"hint_count": len(hints)})
+        self.logger.trace("HintProviderAgent", "tool_usage", {"tools": ["hint_generation_tool"]})
+        self.logger.trace("HintProviderAgent", "output", {"hint_count": len(hints)})
         return hints
 
-    def run_exam_simulation(self):
-        questions = self.state_manager.get_state("questions")
-        if questions is None:
-            questions = self.run_question_generation()
-        results = self.exam_agent.simulate_exam(
-            questions=questions,
-            duration=self.exam_duration_minutes,
-            seed=42,
-        )
-        summary = results.get("_summary", {})
-        explanation = summary.get("explanation", "")
-        accuracy_match = explanation.split("(")[-1].replace("%).", "").replace("%)", "").strip()
-        if accuracy_match.isdigit():
-            self.student_accuracy = int(accuracy_match) / 100.0
-        self.state_manager.update_state("results", results)
-        self.logger.trace("ExamSimulationAgent", "simulate_exam", {"results_count": len(results)})
-        return results
-
     def start_exam_simulation(self):
-        """
-        Execute full end-to-end multi-agent flow via LangGraph.
-        """
         self.logger.log(f"Starting orchestration for domain={self.domain}")
-        final_state = self.workflow_graph.invoke({})
-
-        content = final_state.get("content", self.state_manager.get_state("content") or [])
-        questions = final_state.get("questions", self.state_manager.get_state("questions") or [])
+        final_state = self._execute_sequential_pipeline()
+        source_questions = final_state.get("source_questions", self.state_manager.get_state("source_questions") or [])
+        generated_questions = final_state.get("questions", self.state_manager.get_state("questions") or [])
         hints = final_state.get("hints", self.state_manager.get_state("hints") or {})
-        results = final_state.get("results", self.state_manager.get_state("results") or {})
-
-        self.display_workflow_report(content=content, questions=questions, hints=hints, results=results)
+        evaluation = final_state.get("evaluation", self.state_manager.get_state("evaluation") or {})
+        self.display_workflow_report(source_questions, generated_questions, hints, evaluation)
         self.logger.log("Exam results displayed.")
+        return evaluation
 
-        return results
+    def _execute_sequential_pipeline(self) -> WorkflowState:
+        """
+        Execute CrewAI-backed sequential pipeline; fall back to deterministic execution
+        in environments where CrewAI is unavailable.
+        """
+        if self.crew is not None:
+            self.logger.trace(
+                "Orchestrator",
+                "framework",
+                {"orchestrator": "CrewAI", "model": "sequential_pipeline", "agent_count": 4},
+            )
+        else:
+            self.logger.trace(
+                "Orchestrator",
+                "framework",
+                {"orchestrator": "DeterministicFallback", "reason": "CrewAI not installed"},
+            )
+
+        source_questions = self.run_content_retrieval()
+        generated_questions = self.run_question_generation()
+        evaluation = self.run_exam_simulation()
+        hints = self.run_hint_provider() if evaluation.get("summary", {}).get("weak_topics", []) else {}
+        return {
+            "source_questions": source_questions,
+            "questions": generated_questions,
+            "evaluation": evaluation,
+            "hints": hints,
+        }
 
     @staticmethod
-    def display_workflow_report(content, questions, hints, results):
+    def display_workflow_report(source_questions, generated_questions, hints, evaluation):
         print("\n=== Virtual Tutor Multi-Agent Report ===")
-        print(f"Content Retrieval Agent: loaded {len(content)} content file(s)")
-        print(f"Question Generator Agent: generated {len(questions)} question(s)")
+        print(f"Content Retrieval Agent: parsed {len(source_questions)} source question(s)")
+        print(f"Question Generator Agent: generated {len(generated_questions)} question(s)")
+        details = evaluation.get("details", []) if isinstance(evaluation, dict) else []
+        print(f"Exam Simulation Agent: evaluated {len(details)} answer(s)")
         print(f"Hint Provider Agent: produced {len(hints)} hint(s)")
-        answer_results = {k: v for k, v in results.items() if k != "_summary"}
-        print(f"Exam Simulation Agent: simulated {len(answer_results)} answer result(s)\n")
-
-        print("Questions + Hints + Result:")
-        for index, question in enumerate(questions, start=1):
-            hint = hints.get(question, "No hint available.")
-            result_info = results.get(question, {})
-            status = result_info.get("status", "N/A") if isinstance(result_info, dict) else str(result_info)
-            expected = result_info.get("expected_answer", "Not available") if isinstance(result_info, dict) else "Not available"
-            student = result_info.get("student_answer", "Not available") if isinstance(result_info, dict) else "Not available"
+        print("\nGenerated Questions + Evaluation:")
+        for index, detail in enumerate(details, start=1):
+            question = detail.get("question", "N/A")
             print(f"{index}. Q: {question}")
-            print(f"   Hint: {hint}")
-            print(f"   Expected: {expected}")
-            print(f"   Student: {student}")
-            print(f"   Result: {status}")
-            if isinstance(result_info, dict):
-                print(f"   Explanation: {result_info.get('explanation', 'N/A')}")
-                print(f"   Time Limit(sec): {result_info.get('time_allocated_sec', 'N/A')}")
-        summary = results.get("_summary", {})
+            print(f"   Student: {detail.get('student_answer', 'N/A')}")
+            print(f"   Correct: {detail.get('correct_answer', 'N/A')}")
+            print(f"   Is Correct: {detail.get('is_correct', 'False')}")
+            if question in hints:
+                print(f"   Hint 1: {hints[question].get('hint_level_1', 'N/A')}")
+        summary = evaluation.get("summary", {}) if isinstance(evaluation, dict) else {}
         if isinstance(summary, dict):
-            print(f"\nOverall: {summary.get('explanation', 'N/A')}")
+            print(
+                f"\nOverall: Score={summary.get('score', 0)} "
+                f"Correct={summary.get('correct', 0)}/{summary.get('total', 0)} "
+                f"Weak Topics={summary.get('weak_topics', [])}"
+            )
         print("========================================\n")

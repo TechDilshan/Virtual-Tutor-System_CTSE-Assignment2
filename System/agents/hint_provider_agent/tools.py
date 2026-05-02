@@ -1,3 +1,3 @@
-from tools.hint_provider_tool import provide_hint
+from tools.hint_provider_tool import hint_generation_tool
 
-__all__ = ["provide_hint"]
+__all__ = ["hint_generation_tool"]

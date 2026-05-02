@@ -1,109 +1,74 @@
 from __future__ import annotations
 
-import random
-import re
-from typing import Dict, List, Optional
+import logging
+from typing import Dict, List, TypedDict
 
-from tools.llm_tool import generate_with_ollama, get_last_ollama_error
-
-
-def _safe_ollama(prompt: str, fallback: str) -> str:
-    output = generate_with_ollama(prompt)
-    if output:
-        return output.strip()
-    reason = get_last_ollama_error()
-    return f"{fallback} [{reason}]" if reason else fallback
+from tools.question_generator_tool import GeneratedQuestion
 
 
-def _compact_text(value: str) -> str:
-    text = " ".join(value.strip().split())
-    text = re.sub(r"^mode:\s*(correct|incorrect|partial)\s*!?\s*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"^answer:\s*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"^mode:\s*(correct|incorrect|partial)\s*answer:\s*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"^the correct answer is:\s*", "", text, flags=re.IGNORECASE)
-    return text
+logger = logging.getLogger("virtual_tutor")
 
 
-def simulate_exam(
-    questions: List[str],
-    duration: int = 30,
-    seed: Optional[int] = None,
-    student_answers: Optional[Dict[str, str]] = None,
-) -> Dict[str, Dict[str, str]]:
+class EvaluationSummary(TypedDict):
+    score: int
+    correct: int
+    total: int
+    weak_topics: List[str]
+
+
+def _simulated_answer(question: GeneratedQuestion, index: int) -> str:
     """
-    Simulate an exam result set without blocking execution.
-
-    Args:
-        questions: Questions to evaluate.
-        duration: Retained for compatibility and reporting.
-        seed: Optional deterministic random seed.
+    Produce deterministic simulated answers for non-interactive runs.
     """
-    results: Dict[str, Dict[str, str]] = {}
-    rng = random.Random(seed)
-    duration_seconds = max(60, duration * 60)
-    per_question_seconds = max(20, duration_seconds // max(1, len(questions)))
-    overall_correct = 0
+    if index % 3 == 0:
+        return question["answer"]
+    if question["topic"] == "algebra":
+        return str(int(float(question["answer"])) + 1) if question["answer"].replace(".", "", 1).isdigit() else "0"
+    if question["topic"] == "calculus":
+        return "Needs more steps"
+    return str(max(0, int(question["answer"]) - 1)) if question["answer"].isdigit() else "0"
 
-    for question in questions:
-        expected_prompt = (
-            "You are a strict exam evaluator. Provide only the final expected answer for the "
-            f"following question in one concise line.\nQuestion: {question}"
-        )
-        expected = _safe_ollama(expected_prompt, "Expected answer unavailable (Ollama offline).")
-        expected = _compact_text(expected)
 
-        if student_answers and question in student_answers:
-            student_answer = _compact_text(student_answers[question])
-        else:
-            student_mode = rng.choice(["correct", "partial", "incorrect"])
-            student_prompt = (
-                "Act as a student and answer this question in one short line. "
-                f"Mode: {student_mode}. "
-                "If mode is correct, give a fully correct answer. "
-                "If mode is partial, give an incomplete but relevant answer. "
-                "If mode is incorrect, give a clearly wrong answer.\n"
-                f"Question: {question}"
+def evaluation_tool(
+    questions: List[GeneratedQuestion],
+    provided_answers: Dict[str, str] | None = None,
+) -> Dict[str, object]:
+    """
+    Evaluate answers against expected answers and produce performance summary.
+    """
+    logger.info("evaluation_tool input: questions=%s provided_answers=%s", len(questions), bool(provided_answers))
+    provided_answers = provided_answers or {}
+    correct = 0
+    details: List[Dict[str, str]] = []
+    topic_misses: Dict[str, int] = {}
+
+    try:
+        for index, item in enumerate(questions):
+            question_text = item["question"]
+            expected = item["answer"].strip().lower()
+            student_raw = provided_answers.get(question_text, _simulated_answer(item, index))
+            student = str(student_raw).strip().lower()
+            is_correct = student == expected
+            if is_correct:
+                correct += 1
+            else:
+                topic_misses[item["topic"]] = topic_misses.get(item["topic"], 0) + 1
+            details.append(
+                {
+                    "question": question_text,
+                    "student_answer": str(student_raw),
+                    "correct_answer": item["answer"],
+                    "is_correct": str(is_correct),
+                    "topic": item["topic"],
+                }
             )
-            student_answer = _safe_ollama(student_prompt, f"{student_mode} answer unavailable (Ollama offline).")
-            student_answer = _compact_text(student_answer)
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        logger.error("evaluation_tool failed: %s", exc)
+        return {"summary": {"score": 0, "correct": 0, "total": len(questions), "weak_topics": []}, "details": []}
 
-        judge_prompt = (
-            "Evaluate the student's answer compared to expected answer. Return exactly one label only: "
-            "Correct or Incorrect or Partially Correct.\n"
-            f"Question: {question}\n"
-            f"Expected: {expected}\n"
-            f"Student: {student_answer}"
-        )
-        status = _safe_ollama(judge_prompt, "Partially Correct")
-        status = _compact_text(status)
-        if status not in {"Correct", "Incorrect", "Partially Correct"}:
-            status = "Partially Correct"
-        if status == "Correct":
-            overall_correct += 1
-
-        explanation_prompt = (
-            "Provide a concise one-line explanation for the correct solution path.\n"
-            f"Question: {question}\nExpected answer: {expected}"
-        )
-        explanation = _compact_text(
-            _safe_ollama(explanation_prompt, "Review the core concept and apply the method step by step.")
-        )
-
-        results[question] = {
-            "status": status,
-            "expected_answer": expected,
-            "student_answer": student_answer,
-            "time_allocated_sec": str(per_question_seconds),
-            "explanation": explanation,
-        }
-
-    score_percent = int((overall_correct / max(1, len(questions))) * 100)
-    results["_summary"] = {
-        "status": "Completed",
-        "expected_answer": "N/A",
-        "student_answer": "N/A",
-        "time_allocated_sec": str(duration_seconds),
-        "explanation": f"Score: {overall_correct}/{len(questions)} ({score_percent}%).",
-    }
-
-    return results
+    total = len(questions)
+    score = int((correct / total) * 100) if total else 0
+    weak_topics = [topic for topic, misses in topic_misses.items() if misses > 0]
+    summary: EvaluationSummary = {"score": score, "correct": correct, "total": total, "weak_topics": weak_topics}
+    logger.info("evaluation_tool output: score=%s/%s", correct, total)
+    return {"summary": summary, "details": details}

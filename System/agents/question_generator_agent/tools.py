@@ -1,3 +1,3 @@
-from tools.question_generator_tool import generate_question
+from tools.question_generator_tool import question_generation_tool
 
-__all__ = ["generate_question"]
+__all__ = ["question_generation_tool"]

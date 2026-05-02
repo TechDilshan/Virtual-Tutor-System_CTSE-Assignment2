@@ -1,0 +1,52 @@
+{"timestamp": "2026-05-02T11:55:40.051652+00:00", "agent": "Orchestrator", "step": "framework", "payload": {"orchestrator": "DeterministicFallback", "reason": "CrewAI not installed"}}
+{"timestamp": "2026-05-02T11:55:40.052291+00:00", "agent": "ContentRetrievalAgent", "step": "input", "payload": {"domain": "math", "exam_file": "exam1.txt"}}
+{"timestamp": "2026-05-02T11:55:40.052620+00:00", "agent": "ContentRetrievalAgent", "step": "tool_usage", "payload": {"tools": ["file_reader_tool", "parser_tool"]}}
+{"timestamp": "2026-05-02T11:55:40.052710+00:00", "agent": "ContentRetrievalAgent", "step": "output", "payload": {"structured_count": 6}}
+{"timestamp": "2026-05-02T11:55:40.052780+00:00", "agent": "QuestionGeneratorAgent", "step": "input", "payload": {"source_count": 6, "count": 5}}
+{"timestamp": "2026-05-02T11:55:40.052879+00:00", "agent": "QuestionGeneratorAgent", "step": "tool_usage", "payload": {"tools": ["question_generation_tool"]}}
+{"timestamp": "2026-05-02T11:55:40.052994+00:00", "agent": "QuestionGeneratorAgent", "step": "output", "payload": {"question_count": 5}}
+{"timestamp": "2026-05-02T11:55:40.053080+00:00", "agent": "ExamSimulationAgent", "step": "input", "payload": {"question_count": 5}}
+{"timestamp": "2026-05-02T11:55:40.053189+00:00", "agent": "ExamSimulationAgent", "step": "tool_usage", "payload": {"tools": ["evaluation_tool"]}}
+{"timestamp": "2026-05-02T11:55:40.053263+00:00", "agent": "ExamSimulationAgent", "step": "output", "payload": {"score": 40, "correct": 2, "total": 5, "weak_topics": ["algebra"]}}
+{"timestamp": "2026-05-02T11:55:40.053330+00:00", "agent": "HintProviderAgent", "step": "input", "payload": {"questions_for_hints": 5}}
+{"timestamp": "2026-05-02T11:55:40.053396+00:00", "agent": "HintProviderAgent", "step": "tool_usage", "payload": {"tools": ["hint_generation_tool"]}}
+{"timestamp": "2026-05-02T11:55:40.053454+00:00", "agent": "HintProviderAgent", "step": "output", "payload": {"hint_count": 5}}
+{"timestamp": "2026-05-02T11:55:40.053632+00:00", "agent": "Orchestrator", "step": "framework", "payload": {"orchestrator": "DeterministicFallback", "reason": "CrewAI not installed"}}
+{"timestamp": "2026-05-02T11:55:40.053693+00:00", "agent": "ContentRetrievalAgent", "step": "input", "payload": {"domain": "math", "exam_file": "exam1.txt"}}
+{"timestamp": "2026-05-02T11:55:40.053891+00:00", "agent": "ContentRetrievalAgent", "step": "tool_usage", "payload": {"tools": ["file_reader_tool", "parser_tool"]}}
+{"timestamp": "2026-05-02T11:55:40.053953+00:00", "agent": "ContentRetrievalAgent", "step": "output", "payload": {"structured_count": 6}}
+{"timestamp": "2026-05-02T11:55:40.054009+00:00", "agent": "QuestionGeneratorAgent", "step": "input", "payload": {"source_count": 6, "count": 4}}
+{"timestamp": "2026-05-02T11:55:40.054087+00:00", "agent": "QuestionGeneratorAgent", "step": "tool_usage", "payload": {"tools": ["question_generation_tool"]}}
+{"timestamp": "2026-05-02T11:55:40.054146+00:00", "agent": "QuestionGeneratorAgent", "step": "output", "payload": {"question_count": 4}}
+{"timestamp": "2026-05-02T11:55:40.054201+00:00", "agent": "ExamSimulationAgent", "step": "input", "payload": {"question_count": 4}}
+{"timestamp": "2026-05-02T11:55:40.054265+00:00", "agent": "ExamSimulationAgent", "step": "tool_usage", "payload": {"tools": ["evaluation_tool"]}}
+{"timestamp": "2026-05-02T11:55:40.054321+00:00", "agent": "ExamSimulationAgent", "step": "output", "payload": {"score": 50, "correct": 2, "total": 4, "weak_topics": ["algebra"]}}
+{"timestamp": "2026-05-02T11:55:40.054383+00:00", "agent": "HintProviderAgent", "step": "input", "payload": {"questions_for_hints": 4}}
+{"timestamp": "2026-05-02T11:55:40.054441+00:00", "agent": "HintProviderAgent", "step": "tool_usage", "payload": {"tools": ["hint_generation_tool"]}}
+{"timestamp": "2026-05-02T11:55:40.054496+00:00", "agent": "HintProviderAgent", "step": "output", "payload": {"hint_count": 4}}
+{"timestamp": "2026-05-02T12:03:14.337788+00:00", "agent": "Orchestrator", "step": "framework", "payload": {"orchestrator": "DeterministicFallback", "reason": "CrewAI not installed"}}
+{"timestamp": "2026-05-02T12:03:14.338363+00:00", "agent": "ContentRetrievalAgent", "step": "input", "payload": {"domain": "math", "exam_file": "exam1.txt"}}
+{"timestamp": "2026-05-02T12:03:14.338599+00:00", "agent": "ContentRetrievalAgent", "step": "tool_usage", "payload": {"tools": ["file_reader_tool", "parser_tool"]}}
+{"timestamp": "2026-05-02T12:03:14.338669+00:00", "agent": "ContentRetrievalAgent", "step": "output", "payload": {"structured_count": 6}}
+{"timestamp": "2026-05-02T12:03:14.338733+00:00", "agent": "QuestionGeneratorAgent", "step": "input", "payload": {"source_count": 6, "count": 5}}
+{"timestamp": "2026-05-02T12:03:14.339138+00:00", "agent": "QuestionGeneratorAgent", "step": "tool_usage", "payload": {"tools": ["question_generation_tool"]}}
+{"timestamp": "2026-05-02T12:03:14.339224+00:00", "agent": "QuestionGeneratorAgent", "step": "output", "payload": {"question_count": 5}}
+{"timestamp": "2026-05-02T12:03:14.339294+00:00", "agent": "ExamSimulationAgent", "step": "input", "payload": {"question_count": 5}}
+{"timestamp": "2026-05-02T12:03:14.339374+00:00", "agent": "ExamSimulationAgent", "step": "tool_usage", "payload": {"tools": ["evaluation_tool"]}}
+{"timestamp": "2026-05-02T12:03:14.339436+00:00", "agent": "ExamSimulationAgent", "step": "output", "payload": {"score": 40, "correct": 2, "total": 5, "weak_topics": ["algebra"]}}
+{"timestamp": "2026-05-02T12:03:14.339501+00:00", "agent": "HintProviderAgent", "step": "input", "payload": {"questions_for_hints": 5}}
+{"timestamp": "2026-05-02T12:03:14.340540+00:00", "agent": "HintProviderAgent", "step": "tool_usage", "payload": {"tools": ["hint_generation_tool"]}}
+{"timestamp": "2026-05-02T12:03:14.340606+00:00", "agent": "HintProviderAgent", "step": "output", "payload": {"hint_count": 5}}
+{"timestamp": "2026-05-02T12:03:14.340766+00:00", "agent": "Orchestrator", "step": "framework", "payload": {"orchestrator": "DeterministicFallback", "reason": "CrewAI not installed"}}
+{"timestamp": "2026-05-02T12:03:14.340831+00:00", "agent": "ContentRetrievalAgent", "step": "input", "payload": {"domain": "math", "exam_file": "exam1.txt"}}
+{"timestamp": "2026-05-02T12:03:14.341026+00:00", "agent": "ContentRetrievalAgent", "step": "tool_usage", "payload": {"tools": ["file_reader_tool", "parser_tool"]}}
+{"timestamp": "2026-05-02T12:03:14.341091+00:00", "agent": "ContentRetrievalAgent", "step": "output", "payload": {"structured_count": 6}}
+{"timestamp": "2026-05-02T12:03:14.341151+00:00", "agent": "QuestionGeneratorAgent", "step": "input", "payload": {"source_count": 6, "count": 4}}
+{"timestamp": "2026-05-02T12:03:14.341462+00:00", "agent": "QuestionGeneratorAgent", "step": "tool_usage", "payload": {"tools": ["question_generation_tool"]}}
+{"timestamp": "2026-05-02T12:03:14.341526+00:00", "agent": "QuestionGeneratorAgent", "step": "output", "payload": {"question_count": 4}}
+{"timestamp": "2026-05-02T12:03:14.341582+00:00", "agent": "ExamSimulationAgent", "step": "input", "payload": {"question_count": 4}}
+{"timestamp": "2026-05-02T12:03:14.341647+00:00", "agent": "ExamSimulationAgent", "step": "tool_usage", "payload": {"tools": ["evaluation_tool"]}}
+{"timestamp": "2026-05-02T12:03:14.341703+00:00", "agent": "ExamSimulationAgent", "step": "output", "payload": {"score": 50, "correct": 2, "total": 4, "weak_topics": ["algebra"]}}
+{"timestamp": "2026-05-02T12:03:14.341762+00:00", "agent": "HintProviderAgent", "step": "input", "payload": {"questions_for_hints": 4}}
+{"timestamp": "2026-05-02T12:03:14.342631+00:00", "agent": "HintProviderAgent", "step": "tool_usage", "payload": {"tools": ["hint_generation_tool"]}}
+{"timestamp": "2026-05-02T12:03:14.342698+00:00", "agent": "HintProviderAgent", "step": "output", "payload": {"hint_count": 4}}

@@ -58,17 +58,10 @@ if __name__ == "__main__":
         mode = "exam"
 
     if mode == "content":
-        content = orchestrator.run_content_retrieval()
-        structured = orchestrator.state_manager.get_state("structured_content") or {}
-        questions = structured.get("questions", [])
-        print(f"Content Retrieval Agent Output ({len(content)} file block(s), {len(questions)} question(s)):")
-        if questions:
-            for idx, question in enumerate(questions, start=1):
-                print(f"{idx}. {question}")
-        else:
-            for idx, item in enumerate(content, start=1):
-                print(f"--- Block {idx} ---")
-                print(item)
+        items = orchestrator.run_content_retrieval()
+        print(f"Content Retrieval Agent Output ({len(items)} structured question(s)):")
+        for idx, item in enumerate(items, start=1):
+            print(f"{idx}. {item}")
     elif mode == "questions":
         questions = orchestrator.run_question_generation()
         print("Question Generator Agent Output:")
@@ -79,24 +72,17 @@ if __name__ == "__main__":
         print("Hint Provider Agent Output:")
         for idx, (question, hint) in enumerate(hints.items(), start=1):
             print(f"{idx}. Q: {question}")
-            print(f"   Hint: {hint}")
+            print(f"   Hint: {hint.get('hint_level_1')}")
     elif mode == "exam":
         results = orchestrator.run_exam_simulation()
         print("Exam Simulation Agent Output:")
-        for idx, (question, result) in enumerate(results.items(), start=1):
-            if question == "_summary":
-                continue
-            if isinstance(result, dict):
-                print(f"{idx}. Q: {question}")
-                print(f"   Expected: {result.get('expected_answer', 'Not available')}")
-                print(f"   Student: {result.get('student_answer', 'Not available')}")
-                print(f"   Result: {result.get('status', 'N/A')}")
-                print(f"   Explanation: {result.get('explanation', 'N/A')}")
-                continue
-            print(f"{idx}. Q: {question}")
-            print(f"   Result: {result}")
-        summary = results.get("_summary")
+        for idx, detail in enumerate(results.get("details", []), start=1):
+            print(f"{idx}. Q: {detail.get('question')}")
+            print(f"   Student: {detail.get('student_answer')}")
+            print(f"   Correct: {detail.get('correct_answer')}")
+            print(f"   Correct?: {detail.get('is_correct')}")
+        summary = results.get("summary")
         if isinstance(summary, dict):
-            print(f"\nOverall: {summary.get('explanation', 'N/A')}")
+            print(f"\nOverall: Score={summary.get('score', 0)} Correct={summary.get('correct', 0)}/{summary.get('total', 0)}")
     else:
         orchestrator.start_exam_simulation()

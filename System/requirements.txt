@@ -2,3 +2,4 @@ crewai
 langchain-community 
 ollama
 langgraph
+customtkinter

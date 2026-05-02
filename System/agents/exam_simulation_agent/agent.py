@@ -1,14 +1,28 @@
-from .tools import simulate_exam
+from __future__ import annotations
+
+import logging
+from typing import Dict, List, Optional
+
+from .tools import evaluation_tool
+from tools.question_generator_tool import GeneratedQuestion
+
 
 class ExamSimulationAgent:
     def __init__(self):
-        self.results = {}
+        self.results: Dict[str, object] = {}
+        self.logger = logging.getLogger("virtual_tutor")
 
-    def simulate_exam(self, questions, duration=30, seed=None):
+    def simulate_exam(
+        self,
+        questions: List[GeneratedQuestion],
+        provided_answers: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, object]:
         """
-        Simulate an exam with the given questions and time limit.
+        Evaluate exam answers and generate performance output.
         """
-        self.results = simulate_exam(questions=questions, duration=duration, seed=seed)
+        self.logger.info("ExamSimulationAgent input: questions=%s", len(questions))
+        self.results = evaluation_tool(questions=questions, provided_answers=provided_answers)
+        self.logger.info("ExamSimulationAgent output: keys=%s", list(self.results.keys()))
         return self.results
 
     def display_results(self):
