@@ -11,7 +11,6 @@ if str(SYSTEM_ROOT) not in sys.path:
     sys.path.insert(0, str(SYSTEM_ROOT))
 
 from framework.orchestrator import Orchestrator
-from evaluation.run_agent_eval import run as eval_run
 
 
 class AppController:
@@ -138,24 +137,3 @@ class AppController:
 
     def get_state_snapshot(self) -> Dict[str, object]:
         return self.orchestrator.state_manager.snapshot()
-
-    def run_automated_evaluation(self, llm_judge: bool = False) -> Dict[str, object]:
-        if not self.exam_file:
-            raise ValueError("Select an exam file before running evaluation.")
-        overall_ok, checks = eval_run(
-            domain=self.domain,
-            exam_file=self.exam_file,
-            difficulty=self.difficulty,
-            count=self.question_count,
-            llm_judge=llm_judge,
-        )
-        report = {
-            "overall_ok": overall_ok,
-            "domain": self.domain,
-            "exam_file": self.exam_file,
-            "difficulty": self.difficulty,
-            "count": self.question_count,
-            "checks": [{"name": c.name, "ok": c.ok, "details": c.details} for c in checks],
-        }
-        self._log(f"[Eval] overall_ok={overall_ok}, checks={len(checks)} (llm_judge={llm_judge})")
-        return report

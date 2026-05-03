@@ -12,7 +12,6 @@ class DashboardFrame(ctk.CTkFrame):
         on_load_content,
         on_generate_questions,
         on_start_exam,
-        on_run_evaluation,
     ):
         super().__init__(master)
         self.on_refresh_files = on_refresh_files
@@ -20,7 +19,6 @@ class DashboardFrame(ctk.CTkFrame):
         self.on_load_content = on_load_content
         self.on_generate_questions = on_generate_questions
         self.on_start_exam = on_start_exam
-        self.on_run_evaluation = on_run_evaluation
         self._build()
 
     def _build(self) -> None:
@@ -30,7 +28,7 @@ class DashboardFrame(ctk.CTkFrame):
         )
 
         ctk.CTkLabel(self, text="Domain").grid(row=1, column=0, padx=20, pady=8, sticky="w")
-        self.domain_menu = ctk.CTkOptionMenu(self, values=["math", "science"], command=lambda _: self.on_refresh_files())
+        self.domain_menu = ctk.CTkOptionMenu(self, values=["math", "english"], command=lambda _: self.on_refresh_files())
         self.domain_menu.grid(row=1, column=1, padx=20, pady=8, sticky="ew")
 
         ctk.CTkLabel(self, text="Exam File").grid(row=2, column=0, padx=20, pady=8, sticky="w")
@@ -59,12 +57,6 @@ class DashboardFrame(ctk.CTkFrame):
         self.start_exam_btn = ctk.CTkButton(self, text="Start Exam", command=self.on_start_exam, height=42)
         self.start_exam_btn.grid(row=5, column=2, padx=20, pady=(16, 10), sticky="ew")
 
-        self.llm_judge_var = ctk.BooleanVar(value=False)
-        self.llm_judge_check = ctk.CTkCheckBox(self, text="LLM-as-a-Judge (Ollama)", variable=self.llm_judge_var)
-        self.llm_judge_check.grid(row=6, column=0, padx=20, pady=(8, 8), sticky="w")
-        self.eval_btn = ctk.CTkButton(self, text="Run Automated Evaluation", command=self.on_run_evaluation, height=42)
-        self.eval_btn.grid(row=6, column=1, columnspan=2, padx=20, pady=(8, 8), sticky="ew")
-
     def get_form_data(self) -> dict:
         count_raw = self.question_count_entry.get().strip() or "5"
         return {
@@ -72,15 +64,9 @@ class DashboardFrame(ctk.CTkFrame):
             "exam_file": self.file_menu.get(),
             "difficulty": self.difficulty_menu.get(),
             "question_count": int(count_raw),
-            "llm_judge": bool(self.llm_judge_var.get()),
         }
 
-    def update_exam_files(self, files: list[str], selected_file: str | None = None) -> None:
+    def update_exam_files(self, files: list[str]) -> None:
         values = files if files else ["<no files>"]
         self.file_menu.configure(values=values)
-        if selected_file and selected_file in values:
-            self.file_menu.set(selected_file)
-        elif self.file_menu.get() in values:
-            self.file_menu.set(self.file_menu.get())
-        else:
-            self.file_menu.set(values[0])
+        self.file_menu.set(values[0])

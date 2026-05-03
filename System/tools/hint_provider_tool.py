@@ -59,12 +59,6 @@ def hint_generation_tool(question_item: GeneratedQuestion) -> HintBundle:
                 "hint_level_2": "Use the power rule and keep constant multipliers.",
                 "hint_level_3": "Differentiate each term separately, then combine and simplify.",
             }
-        elif topic == "science":
-            hints = {
-                "hint_level_1": "Identify the key scientific concept in the question.",
-                "hint_level_2": "Recall the related definition, symbol, or process from your notes.",
-                "hint_level_3": "Connect the concept to a real example to choose the most accurate answer.",
-            }
         else:
             hints = {
                 "hint_level_1": "Rewrite the expression clearly before solving.",

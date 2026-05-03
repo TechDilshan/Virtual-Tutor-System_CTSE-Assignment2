@@ -44,49 +44,15 @@ def file_reader_tool(domain: str, exam_file: Optional[str] = None) -> List[str]:
 
 def _detect_topic(question: str) -> str:
     lower = question.lower()
-    has_math_symbol = bool(re.search(r"[=+\-*/^]|\\d", lower))
-    if any(
-        keyword in lower
-        for keyword in (
-            "atom",
-            "molecule",
-            "symbol",
-            "oxygen",
-            "hydrogen",
-            "water",
-            "salt",
-            "made of",
-            "photosynthesis",
-            "gravity",
-            "cell",
-            "energy",
-            "ph",
-            "acid",
-            "base",
-        )
-    ):
-        return "science"
-    if any(keyword in lower for keyword in ("theme", "metaphor", "grammar", "novel", "poem", "summary", "tone", "passage", "essay")):
-        return "language"
     if any(keyword in lower for keyword in ("differentiate", "integrate", "derivative", "integral", "dx")):
         return "calculus"
     if any(keyword in lower for keyword in ("solve", "equation", "x =", "for x")):
         return "algebra"
-    if has_math_symbol:
-        return "arithmetic"
-    return "language"
+    return "arithmetic"
 
 
 def _detect_type(question: str) -> str:
     lower = question.lower()
-    if any(keyword in lower for keyword in ("symbol", "formula", "element", "compound")):
-        return "scientific-fact"
-    if any(keyword in lower for keyword in ("experiment", "process", "reaction", "photosynthesis")):
-        return "scientific-process"
-    if any(keyword in lower for keyword in ("summary", "theme", "tone", "metaphor")):
-        return "comprehension"
-    if any(keyword in lower for keyword in ("essay", "explain", "discuss")):
-        return "writing"
     if "integrate" in lower or "integral" in lower:
         return "integration"
     if "differentiate" in lower or "derivative" in lower:
@@ -95,13 +61,13 @@ def _detect_type(question: str) -> str:
         return "equation-solving"
     if "square root" in lower:
         return "root-calculation"
-    return "general-math" if _detect_topic(question) != "language" else "comprehension"
+    return "general-math"
 
 
 def _detect_difficulty(topic: str) -> str:
     if topic == "calculus":
         return "hard"
-    if topic in {"algebra", "language", "science"}:
+    if topic == "algebra":
         return "medium"
     return "easy"
 

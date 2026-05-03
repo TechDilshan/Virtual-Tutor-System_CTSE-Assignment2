@@ -24,24 +24,3 @@ python main.py --domain math --mode full --questions 5 --exam-file exam1.txt
 
 Desktop UI (CustomTkinter):
 python ui/app.py
-
-## Tests
-
-From repo root:
-python3 -m unittest discover -s System -p "test*.py"
-
-If you are already inside the `System/` folder:
-python3 -m unittest discover -s . -p "test*.py"
-
-Run tests from anywhere (recommended):
-python3 run_tests.py
-
-## Automated Evaluation (accuracy + security properties)
-
-Property-based style checks + optional "LLM-as-a-Judge" (Ollama):
-
-python3 -m System.evaluation.run_agent_eval --domain math --exam-file exam1.txt --count 5
-python3 -m System.evaluation.run_agent_eval --domain science --exam-file sci1.txt --count 5
-
-Enable Ollama judge (skips automatically if Ollama not running/model missing):
-python3 -m System.evaluation.run_agent_eval --domain science --exam-file sci1.txt --count 5 --llm-judge
