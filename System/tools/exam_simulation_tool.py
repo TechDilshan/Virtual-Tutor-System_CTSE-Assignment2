@@ -16,17 +16,20 @@ class EvaluationSummary(TypedDict):
     weak_topics: List[str]
 
 
-def _simulated_answer(question: GeneratedQuestion, index: int) -> str:
-    """
-    Produce deterministic simulated answers for non-interactive runs.
-    """
-    if index % 3 == 0:
-        return question["answer"]
-    if question["topic"] == "algebra":
-        return str(int(float(question["answer"])) + 1) if question["answer"].replace(".", "", 1).isdigit() else "0"
-    if question["topic"] == "calculus":
-        return "Needs more steps"
-    return str(max(0, int(question["answer"]) - 1)) if question["answer"].isdigit() else "0"
+def _normalize_question_key(text: str) -> str:
+    return " ".join(text.replace("\n", " ").split()).strip()
+
+
+def _resolve_student_answer(question_text: str, provided_answers: Dict[str, str]) -> str | None:
+    if not provided_answers:
+        return None
+    if question_text in provided_answers:
+        return provided_answers[question_text]
+    target = _normalize_question_key(question_text)
+    for key, value in provided_answers.items():
+        if _normalize_question_key(key) == target:
+            return value
+    return None
 
 
 def evaluation_tool(
@@ -43,10 +46,12 @@ def evaluation_tool(
     topic_misses: Dict[str, int] = {}
 
     try:
-        for index, item in enumerate(questions):
+        for item in questions:
             question_text = item["question"]
             expected = item["answer"].strip().lower()
-            student_raw = provided_answers.get(question_text, _simulated_answer(item, index))
+            resolved = _resolve_student_answer(question_text, provided_answers)
+            # No submission (user skipped / Next without Save): show empty, grade as incorrect.
+            student_raw = resolved if resolved is not None else ""
             student = str(student_raw).strip().lower()
             is_correct = student == expected
             if is_correct:
