@@ -12,6 +12,7 @@ class DashboardFrame(ctk.CTkFrame):
         on_load_content,
         on_generate_questions,
         on_start_exam,
+        on_run_automated_eval,
     ):
         super().__init__(master)
         self.on_refresh_files = on_refresh_files
@@ -19,6 +20,7 @@ class DashboardFrame(ctk.CTkFrame):
         self.on_load_content = on_load_content
         self.on_generate_questions = on_generate_questions
         self.on_start_exam = on_start_exam
+        self.on_run_automated_eval = on_run_automated_eval
         self._build()
 
     def _build(self) -> None:
@@ -56,6 +58,28 @@ class DashboardFrame(ctk.CTkFrame):
         self.generate_btn.grid(row=5, column=1, padx=20, pady=(16, 10), sticky="ew")
         self.start_exam_btn = ctk.CTkButton(self, text="Start Exam", command=self.on_start_exam, height=42)
         self.start_exam_btn.grid(row=5, column=2, padx=20, pady=(16, 10), sticky="ew")
+
+        ctk.CTkLabel(
+            self,
+            text="Automated evaluation (pipeline checks)",
+            font=ctk.CTkFont(size=16, weight="bold"),
+        ).grid(row=6, column=0, columnspan=3, sticky="w", padx=20, pady=(24, 6))
+        ctk.CTkLabel(
+            self,
+            text="Runs property & security checks on content → questions → exam tools. "
+            "Results appear under Results → Automated evaluation.",
+            wraplength=720,
+            justify="left",
+        ).grid(row=7, column=0, columnspan=3, sticky="w", padx=20, pady=(0, 8))
+        self.llm_judge_eval = ctk.CTkCheckBox(self, text="Include LLM-as-judge (requires Ollama)")
+        self.llm_judge_eval.grid(row=8, column=0, columnspan=2, padx=20, pady=8, sticky="w")
+        self.run_automated_eval_btn = ctk.CTkButton(
+            self,
+            text="Run automated evaluation",
+            command=self.on_run_automated_eval,
+            height=40,
+        )
+        self.run_automated_eval_btn.grid(row=8, column=2, padx=20, pady=8, sticky="ew")
 
     def get_form_data(self) -> dict:
         count_raw = self.question_count_entry.get().strip() or "5"

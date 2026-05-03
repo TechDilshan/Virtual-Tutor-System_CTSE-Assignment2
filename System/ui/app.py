@@ -11,6 +11,7 @@ from components.question_panel import QuestionPanel
 from components.result_panel import ResultPanel
 from components.sidebar import Sidebar
 from controllers.app_controller import AppController
+from evaluation_bridge import execute_automated_eval
 
 
 class VirtualTutorApp(ctk.CTk):
@@ -52,6 +53,7 @@ class VirtualTutorApp(ctk.CTk):
             on_load_content=self.handle_load_content,
             on_generate_questions=self.handle_generate_questions,
             on_start_exam=self.handle_start_exam,
+            on_run_automated_eval=self.handle_run_automated_eval,
         )
         self.question_screen = QuestionPanel(
             self.content_host,
@@ -214,6 +216,43 @@ class VirtualTutorApp(ctk.CTk):
         self.result_screen.set_results(results)
         self.show_screen("results")
         messagebox.showinfo("Exam Completed", "Results are ready.")
+
+    def handle_run_automated_eval(self) -> None:
+        try:
+            self._sync_controller_config()
+            form = self.dashboard.get_form_data()
+            exam_file = form["exam_file"]
+            if exam_file == "<no files>":
+                exam_file = None
+            if not exam_file:
+                messagebox.showwarning(
+                    "Automated evaluation",
+                    "Select or attach an exam .txt file first.",
+                )
+                return
+            count = max(1, int(form["question_count"]))
+            llm_judge = bool(self.dashboard.llm_judge_eval.get())
+            self.append_log(
+                f"[Automated evaluation] Starting (domain={form['domain']}, file={exam_file}, n={count}, llm_judge={llm_judge})"
+            )
+            ok, rows = execute_automated_eval(
+                domain=form["domain"],
+                exam_file=exam_file,
+                question_count=count,
+                difficulty=form["difficulty"],
+                llm_judge=llm_judge,
+            )
+            self.result_screen.set_automated_eval(ok, rows)
+            self.show_screen("results")
+            self.append_log(f"[Automated evaluation] Finished: {'PASS' if ok else 'FAIL'}")
+            messagebox.showinfo(
+                "Automated evaluation",
+                "All checks passed." if ok else "Some checks failed — see Results → Automated evaluation.",
+            )
+        except ValueError as exc:
+            messagebox.showerror("Automated evaluation", str(exc))
+        except Exception as exc:  # pragma: no cover - UI safety
+            messagebox.showerror("Automated evaluation", str(exc))
 
 
 if __name__ == "__main__":
