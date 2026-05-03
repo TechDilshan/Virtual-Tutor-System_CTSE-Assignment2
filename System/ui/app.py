@@ -52,6 +52,7 @@ class VirtualTutorApp(ctk.CTk):
             on_load_content=self.handle_load_content,
             on_generate_questions=self.handle_generate_questions,
             on_start_exam=self.handle_start_exam,
+            on_run_evaluation=self.handle_run_evaluation,
         )
         self.question_screen = QuestionPanel(
             self.content_host,
@@ -85,10 +86,11 @@ class VirtualTutorApp(ctk.CTk):
             frame.grid_forget()
         self.screens[name].grid(row=0, column=0, sticky="nsew")
 
-    def refresh_files(self) -> None:
+    def refresh_files(self, preferred_file: str | None = None) -> None:
         domain = self.dashboard.domain_menu.get()
         files = self.controller.get_available_exam_files(domain=domain)
-        self.dashboard.update_exam_files(files)
+        current = preferred_file or self.dashboard.file_menu.get()
+        self.dashboard.update_exam_files(files, selected_file=current)
         self.append_log(f"[Content Agent] Found {len(files)} exam file(s) for {domain}")
 
     def browse_exam_file(self) -> None:
@@ -101,8 +103,7 @@ class VirtualTutorApp(ctk.CTk):
         self._sync_controller_config()
         try:
             filename = self.controller.attach_exam_file(chosen)
-            self.refresh_files()
-            self.dashboard.file_menu.set(filename)
+            self.refresh_files(preferred_file=filename)
             messagebox.showinfo("File Added", f"Exam file '{filename}' is ready for this domain.")
         except (FileNotFoundError, ValueError) as exc:
             messagebox.showerror("File Error", str(exc))
@@ -122,6 +123,7 @@ class VirtualTutorApp(ctk.CTk):
             difficulty=form["difficulty"],
             question_count=count,
         )
+        self._llm_judge_enabled = bool(form.get("llm_judge", False))
 
     def handle_load_content(self) -> None:
         try:
@@ -214,6 +216,20 @@ class VirtualTutorApp(ctk.CTk):
         self.result_screen.set_results(results)
         self.show_screen("results")
         messagebox.showinfo("Exam Completed", "Results are ready.")
+
+    def handle_run_evaluation(self) -> None:
+        """
+        Run the automated evaluation checks and display them in Results screen.
+        """
+        try:
+            self._sync_controller_config()
+            report = self.controller.run_automated_evaluation(llm_judge=getattr(self, "_llm_judge_enabled", False))
+            self.append_log(f"[Eval] Completed automated evaluation (overall_ok={report.get('overall_ok')})")
+            self.result_screen.set_evaluation(report)
+            self.show_screen("results")
+            messagebox.showinfo("Evaluation Completed", "Evaluation report is shown in Results.")
+        except Exception as exc:
+            messagebox.showerror("Evaluation Error", str(exc))
 
 
 if __name__ == "__main__":
